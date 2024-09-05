@@ -16,6 +16,22 @@ const Configs = module.exports;
 Meta.config = {};
 
 // called after data is loaded from db
+function isStringToNumber(defaultType, type) {
+	return defaultType === 'string' && type === 'number';
+}
+
+function isNumberToString(defaultType, type, number, value) {
+	return defaultType === 'number' && type === 'string' && !isNaN(number) && isFinite(value);
+}
+
+function isTrueFalse(value) {
+	return value === 'true' || value === 'false';
+}
+
+function isArrayToNonArray(defaults, key, value) {
+	return Array.isArray(defaults[key]) && !Array.isArray(value);
+}
+
 function deserialize(config) {
 	const deserialized = {};
 	Object.keys(config).forEach((key) => {
@@ -23,23 +39,17 @@ function deserialize(config) {
 		const type = typeof config[key];
 		const number = parseFloat(config[key]);
 
-		if (defaultType === 'string' && type === 'number') {
+		if (isStringToNumber(defaultType, type)) {
 			deserialized[key] = String(config[key]);
-		} else if (defaultType === 'number' && type === 'string') {
-			if (!isNaN(number) && isFinite(config[key])) {
-				deserialized[key] = number;
-			} else {
-				deserialized[key] = defaults[key];
-			}
-		} else if (config[key] === 'true') {
-			deserialized[key] = true;
-		} else if (config[key] === 'false') {
-			deserialized[key] = false;
+		} else if (isNumberToString(defaultType, type, number, config[key])) {
+			deserialized[key] = number;
+		} else if (isTrueFalse(config[key])) {
+			deserialized[key] = config[key] === 'true';
 		} else if (config[key] === null) {
 			deserialized[key] = defaults[key];
 		} else if (defaultType === 'undefined' && !isNaN(number) && isFinite(config[key])) {
 			deserialized[key] = number;
-		} else if (Array.isArray(defaults[key]) && !Array.isArray(config[key])) {
+		} else if (isArrayToNonArray(defaults, key, config[key])) {
 			try {
 				deserialized[key] = JSON.parse(config[key] || '[]');
 			} catch (err) {
